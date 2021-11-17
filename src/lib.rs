@@ -124,7 +124,11 @@ impl ProcessedConfig {
     pub fn process_file(&self, path: impl AsRef<Path>, check: bool) -> Res<()> {
         let absolute_path = absolute_path(&path)?;
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
-            eprintln!("Error while reading file \"{}\" : {}", absolute_path, e.to_string().red());
+            eprintln!(
+                "Error while reading file \"{}\" : {}",
+                absolute_path,
+                e.to_string().red()
+            );
             std::process::exit(3);
         });
 
@@ -323,6 +327,8 @@ impl ProcessedConfig {
             Value::Array(inner) => Value::Array(self.format_array(inner, last)?),
             Value::InlineTable(inner) => Value::InlineTable(self.format_inline_table(inner, last)?),
             v => {
+                let mut v = v.clone();
+
                 // Keep existing prefix/suffix with correct format.
                 let prefix = v.decor().prefix().map(|x| x.trim()).unwrap_or("");
 
@@ -340,13 +346,31 @@ impl ProcessedConfig {
                     format!(" {}", suffix)
                 };
 
+                // Convert simple '...' to "..."
+                // Doesn't modify strings starting with multiple ' as they
+                // Doesn't modify strings containing \ or "
+                // could be multiline literals.
+                let mut display = v.clone().decorated("", "").to_string();
+                if display.starts_with("'")
+                    && !display.starts_with("''")
+                    && display.find(&['\\', '"'][..]).is_none()
+                {
+                    if let Some(s) = display.strip_prefix("'") {
+                        display = s.to_string();
+                    }
+
+                    if let Some(s) = display.strip_suffix("'") {
+                        display = s.to_string();
+                    }
+
+                    v = display.into();
+                }
+
                 // Handle surrounding spaces.
                 if last {
-                    v.clone()
-                        .decorated(&format!("{} ", prefix), &format!("{} ", suffix))
+                    v.decorated(&format!("{} ", prefix), &format!("{} ", suffix))
                 } else {
-                    v.clone()
-                        .decorated(&format!("{} ", prefix), &format!("{}", suffix))
+                    v.decorated(&format!("{} ", prefix), &format!("{}", suffix))
                 }
             }
         })
@@ -398,7 +422,9 @@ impl ProcessedConfig {
                     .suffix()
                     .unwrap_or("")
                     .trim_matches(&[' ', '\t', '\n'][..]);
-                *value = value.clone().decorated(&prefix, suffix);
+
+                let formatted_value = self.format_value(&value, false)?;
+                *value = formatted_value.decorated(&prefix, suffix);
             }
         }
         // Inline array
