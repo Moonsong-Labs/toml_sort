@@ -1,0 +1,19 @@
+[package]
+authors = [ "PureStake" ]
+edition = "2021"
+name = "toml-sort"
+version = "0.1.0"
+
+[dependencies]
+# Config loading
+serde = { version = "1.0.130", features = [ "derive" ] }
+toml = "0.5.8" # Parse `toml-sort.toml` file
+
+# CLI stuff
+colored = "2.0.0"
+structopt = "0.3.25"
+
+# TOML handling
+toml_edit = "0.9.1" # Edit TOML files
+
+# Running `cargo run -- ./Cargo.toml --check` should succeed.
