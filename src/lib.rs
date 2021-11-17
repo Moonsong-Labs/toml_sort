@@ -122,8 +122,9 @@ fn absolute_path(path: impl AsRef<Path>) -> Res<String> {
 impl ProcessedConfig {
     /// Process the provided file.
     pub fn process_file(&self, path: impl AsRef<Path>, check: bool) -> Res<()> {
+        let absolute_path = absolute_path(&path)?;
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
-            eprintln!("Error while reading file : {}", e.to_string().red());
+            eprintln!("Error while reading file \"{}\" : {}", absolute_path, e.to_string().red());
             std::process::exit(3);
         });
 
@@ -137,19 +138,19 @@ impl ProcessedConfig {
 
         if check {
             if text != output_text {
-                eprintln!("Check fails : {}", absolute_path(&path)?.red());
+                eprintln!("Check fails : {}", absolute_path.red());
                 std::process::exit(2);
             } else {
-                println!("Check succeed: {}", absolute_path(&path)?.green());
+                println!("Check succeed: {}", absolute_path.green());
             }
         } else {
             if text != output_text {
                 let mut file = File::create(&path)?;
                 file.write_all(output_text.as_bytes())?;
                 file.flush()?;
-                println!("Overwritten: {}", absolute_path(&path)?.blue());
+                println!("Overwritten: {}", absolute_path.blue());
             } else {
-                println!("Unchanged: {}", absolute_path(&path)?.green());
+                println!("Unchanged: {}", absolute_path.green());
             }
         }
 
@@ -163,6 +164,11 @@ impl ProcessedConfig {
     fn format_table(&self, table: &Table) -> Res<Table> {
         let mut formated_table = Table::new();
         formated_table.set_implicit(true); // avoid empty `[dotted.keys]`
+        let prefix = table.decor().prefix().unwrap_or("");
+        let suffix = table.decor().suffix().unwrap_or("");
+        formated_table.decor_mut().set_prefix(prefix);
+        formated_table.decor_mut().set_suffix(suffix);
+
         let mut section_decor = Decor::default();
         let mut section = Vec::<Entry<Item>>::new();
 
@@ -201,6 +207,7 @@ impl ProcessedConfig {
                     section.sort_by(sort);
 
                     for (i, mut entry) in section.into_iter().enumerate() {
+                        // Add section prefix.
                         if i == 0 {
                             if let Some(prefix) = section_decor.prefix() {
                                 entry.decor.set_prefix(prefix);
@@ -244,6 +251,7 @@ impl ProcessedConfig {
         section.sort_by(sort);
 
         for (i, mut entry) in section.into_iter().enumerate() {
+            // Add section prefix.
             if i == 0 {
                 if let Some(prefix) = section_decor.prefix() {
                     entry.decor.set_prefix(prefix);
