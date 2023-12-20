@@ -197,7 +197,7 @@ impl ProcessedConfig {
             if i == 0 {
                 if let Some(prefix) = key_decor.prefix() {
                     if !prefix.is_empty() {
-                        section_decor.set_prefix(prefix.clone());
+                        section_decor.set_prefix(prefix);
                         key_decor.set_prefix("".to_string());
                     }
                 }
@@ -225,7 +225,7 @@ impl ProcessedConfig {
                     // Cleanup for next sections.
                     section = Vec::new();
                     section_decor = Decor::default();
-                    section_decor.set_prefix(prefix.clone());
+                    section_decor.set_prefix(prefix);
                     key_decor.set_prefix("".to_string());
                 }
             }
